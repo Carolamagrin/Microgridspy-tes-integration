@@ -31,7 +31,7 @@ $$
 Q_{\text{cooling}} = COP_{\text{direct}} \cdot P_{\text{electric}}
 $$
 
-where:
+where: 
 
 - $Q_{\text{cooling}}$ = cooling power delivered to the cold room [W]  
 - $COP_{\text{direct}}$ = coefficient of performance of the direct compressor [-]  
