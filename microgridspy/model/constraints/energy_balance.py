@@ -276,7 +276,7 @@ def add_lost_load_constraint(
     use_tes = settings.advanced_settings.use_tes
 
     for year in years:
-        # parte numerica: domanda * frazione ammessa
+        # domanda * frazione ammessa
         rhs = param['DEMAND'].sel(years=year) * param['LOST_LOAD_FRACTION']
 
         # domanda elettrica da compressore/TES
