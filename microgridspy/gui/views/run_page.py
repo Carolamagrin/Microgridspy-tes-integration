@@ -309,9 +309,9 @@ def run_model():
             st.write("Compressor Cooling Output:", solution.get("Compressor Cooling Output"))
             st.write("Compressor Electric Consumption:", solution.get("Compressor Electric Consumption"))
             st.write("THERMAL_DEMAND:", solution.get("THERMAL_DEMAND"))
-            # =======================
-            #   TES RESULT VARIABLES 
-            # =======================
+
+            #   TES RESULTS (si potrebbe togliere ma per il momento lascio)
+
             st.write("### TES Results")
 
             solution_ds = model.solution  # shortcut
@@ -332,7 +332,7 @@ def run_model():
                     st.write(f"Cannot print {var_name}: {e}")
 
 
-            # DEBUG TES
+            # DEBUG TES (si potrebbe togliere ma per il momento lascio)
             st.subheader("DEBUG TES after solve")
             st.write("TES Charge Flow:", model.solution.get("TES Charge Flow"))
             st.write("TES Discharge Flow:", model.solution.get("TES Discharge Flow"))
