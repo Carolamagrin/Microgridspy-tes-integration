@@ -163,7 +163,7 @@ def add_energy_balance_constraints(
         # Domanda elettrica totale: domanda base + compressore diretto + compressore TES
         base_electric_demand = param['DEMAND'].sel(years=year)
 
-        # Extra domanda elettrica dovuta a compressore diretto e TES (solo variabili linopy)
+        # Extra domanda elettrica dovuta a compressore diretto e TES
         if has_compressor and has_tes:
             extra_electric_demand = (
                 var['compressor_electric_consumption'].sel(years=year)
@@ -178,13 +178,12 @@ def add_energy_balance_constraints(
             extra_electric_demand = 0 * yearly_energy_production
 
         # Energy balance per ogni anno:
-        # tutta la parte con variabili a sinistra, a destra solo la domanda numerica
         model.add_constraints(
             yearly_energy_production - yearly_conversion_losses - extra_electric_demand == base_electric_demand,
             name=f"Energy Balance Constraint - Year {year}"
         )
 
-        # Bilancio della domanda di freddo (se c'è compressore e/o TES)
+        # Bilancio della domanda di freddo
         if has_compressor or has_tes:
             # Freddo diretto dal compressore (se presente)
             if has_compressor:
@@ -206,7 +205,7 @@ def add_energy_balance_constraints(
                 name=f"Cooling Demand Balance - Year {year}"
             )
 
-    # Add renewable penetration constraint if specified
+    # Add renewable penetration constraint
     if settings.project_settings.renewable_penetration > 0:
         add_renewable_penetration_constraint(model, settings, sets, param, var, has_battery, has_generator, has_grid_connection)
 
@@ -280,7 +279,7 @@ def add_lost_load_constraint(
         # parte numerica: domanda * frazione ammessa
         rhs = param['DEMAND'].sel(years=year) * param['LOST_LOAD_FRACTION']
 
-        # parte di "domanda elettrica servita da compressore/TES"
+        # domanda elettrica da compressore/TES
         if use_compressor and use_tes:
             served_by_cooling = (
                 var['compressor_electric_consumption'].sel(years=year)
@@ -293,8 +292,7 @@ def add_lost_load_constraint(
         else:
             served_by_cooling = 0 * var['lost_load'].sel(years=year)
 
-        # vincolo: lost_load ≤ (DEMAND + parte coperta dai compressori) * FRAZIONE
-        # spostiamo la parte con variabili a sinistra per evitare somme variabile + DataArray
+        # lost_load ≤ (DEMAND + parte coperta dai compressori) * FRAZIONE
         model.add_constraints(
             var['lost_load'].sel(years=year) - served_by_cooling <= rhs,
             name=f"Lost Load Constraint - Year {year}"
