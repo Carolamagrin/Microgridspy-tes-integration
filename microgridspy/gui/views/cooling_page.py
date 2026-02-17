@@ -4,7 +4,6 @@ def cooling_technology():
     st.title("Cooling Technologies Configuration")
     st.write("Configure cooling options: direct compressor cooling and/or TES with compressor.")
 
-    # Carico il modello dei parametri
     data = st.session_state.default_values
 
     #Selezione tecnologie (TES e Compressore diretto)
