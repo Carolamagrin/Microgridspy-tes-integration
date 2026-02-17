@@ -134,14 +134,14 @@ def add_tes_flow_constraints(
 
             mode = var["tes_mode"].sel(years=year, periods=period)
 
-            # Se mode == 1, può solo caricare
+            # Se mode = 1 può solo caricare
             model.add_constraints(
                 var["tes_charge"].sel(years=year, periods=period)
                 <= M_charge * mode,
                 name=f"TES Charge Allowed - Year {year} Period {period}"
             )
 
-            # Se mode == 0, può solo scaricare
+            # Se mode = 0 può solo scaricare
             model.add_constraints(
                 var["tes_discharge"].sel(years=year, periods=period)
                 <= M_discharge * ((mode * 0 + 1) - mode),
@@ -161,13 +161,13 @@ def add_tes_production_constraints(
 
     m_prod(t) * Q_per_kg = COP_TES * P_el,TES(t)
 
-    Assumiamo che tutto il ghiaccio prodotto venga usato per caricare il TES:
+    Assumo che tutto il ghiaccio prodotto venga usato per caricare il TES:
     m_charge(t) = m_prod(t)
     """
     tes_cop = param["TES_COP"]
     q_per_kg = param["TES_Q_PER_KG"]
 
-    #produzione ghiaccio - consumo elettrico
+    #produzione ghiaccio e consumo elettrico
     model.add_constraints(
         var["tes_ice_production"] * q_per_kg
         == var["tes_electric_consumption"] * tes_cop,
