@@ -7,6 +7,12 @@ from typing import Dict
 from microgridspy.model.model import Model
 from microgridspy.post_process.data_retrieval import get_sizing_results
 
+def _n_scenarios(da) -> int:
+    return da.sizes.get("scenarios", 1)
+
+def _isel_scenario(da, scenario: int):
+    return da.isel(scenarios=scenario) if "scenarios" in getattr(da, "dims", ()) else da
+
 def save_energy_balance_to_excel(model: Model, base_filepath: Path) -> None:
     demand = model.parameters['DEMAND']
     res_production = model.get_solution_variable('Energy Production by Renewables')
@@ -20,13 +26,14 @@ def save_energy_balance_to_excel(model: Model, base_filepath: Path) -> None:
     step_duration = model.settings.advanced_settings.step_duration
     years_steps_tuples = [(years[i], steps[i // step_duration]) for i in range(len(years))]
 
-    for scenario in range(demand.sizes['scenarios']):
+    for scenario in range(_n_scenarios(demand)):
         filepath = base_filepath / f"Energy Balance - Scenario {scenario + 1}.xlsx"
         with pd.ExcelWriter(filepath) as writer:
             # Write energy balance for each year
             for year in range(len(years)):
                 step = years_steps_tuples[year][1]
-                data = {'Demand (kWh)': (demand.isel(years=year, scenarios=scenario).values) / 1000}
+                demand_y = _isel_scenario(demand, scenario).isel(years=year).values
+                data = {'Demand (kWh)': demand_y / 1000}
                 
                 # Add specific production for each renewable source
                 for source in res_production.coords['renewable_sources'].values:
@@ -78,41 +85,23 @@ def save_energy_balance_to_excel(model: Model, base_filepath: Path) -> None:
                     tes_capacity = model.parameters["TES_CAPACITY"]
                     tes_q_per_kg = model.parameters["TES_Q_PER_KG"]
 
-                    # Stato di carica (in % della capacità totale)
-                    data["TES State of Charge (kg)"] = (
-                        tes_soc.isel(scenarios=scenario).sel(years=year + start_year).values
-                    )
+                    tes_soc_y = _isel_scenario(tes_soc, scenario).sel(years=year + start_year).values
+                    tes_charge_y = _isel_scenario(tes_charge, scenario).sel(years=year + start_year).values
+                    tes_discharge_y = _isel_scenario(tes_discharge, scenario).sel(years=year + start_year).values
+                    tes_ice_y = _isel_scenario(tes_ice_production, scenario).sel(years=year + start_year).values
+                    tes_el_y = _isel_scenario(tes_electric, scenario).sel(years=year + start_year).values
 
-                    data["TES State of Charge (%)"] = (
-                        tes_soc.isel(scenarios=scenario).sel(years=year + start_year).values
-                        / tes_capacity.values * 100
-                    )
+                    data["TES State of Charge (kg)"] = tes_soc_y
+                    data["TES State of Charge (%)"] = tes_soc_y / tes_capacity.values * 100
 
-                    # Flussi di carica e scarica
-                    data["TES Charge (kg/h)"] = (
-                        tes_charge.isel(scenarios=scenario).sel(years=year + start_year).values
-                    )
+                    data["TES Charge (kg/h)"] = tes_charge_y
+                    data["TES Discharge (kg/h)"] = tes_discharge_y
 
-                    data["TES Discharge (kg/h)"] = (
-                        tes_discharge.isel(scenarios=scenario).sel(years=year + start_year).values
-                    )
+                    data["TES Ice Production (kg/h)"] = tes_ice_y
 
-                    # Produzione di ghiaccio
-                    data["TES Ice Production (kg/h)"] = (
-                        tes_ice_production.isel(scenarios=scenario).sel(years=year + start_year).values
-                    )
+                    data["TES Electric Consumption (kWh)"] = tes_el_y / 1000
 
-                    # Consumo elettrico del TES
-                    data["TES Electric Consumption (kWh)"] = (
-                        tes_electric.isel(scenarios=scenario).sel(years=year + start_year).values / 1000
-                    )
-
-                    # Raffreddamento fornito dal TES
-                    data["TES Cooling Output (kWh_th)"] = (
-                        tes_discharge.isel(scenarios=scenario).sel(years=year + start_year).values
-                        * tes_q_per_kg.values
-                        / 1000
-                    )
+                    data["TES Cooling Output (kWh_th)"] = tes_discharge_y * tes_q_per_kg.values / 1000
 
                 # Direct compressor data
                 if model.has_compressor:
@@ -126,19 +115,16 @@ def save_energy_balance_to_excel(model: Model, base_filepath: Path) -> None:
                         direct_capacity.values
                     )
 
-                    # Consumo elettrico del compressore diretto (kWh)
                     data["Direct Compressor Electric Consumption (kWh)"] = (
-                        direct_electric.isel(scenarios=scenario)
+                        _isel_scenario(direct_electric, scenario)
                         .sel(years=year + start_year).values / 1000
                     )
 
-                    # Raffreddamento diretto prodotto (kWh_th)
                     data["Direct Cooling Output (kWh_th)"] = (
-                        direct_cooling.isel(scenarios=scenario)
+                        _isel_scenario(direct_cooling, scenario)
                         .sel(years=year + start_year).values / 1000
                     )
-
-                 
+            
                 # Generator data
                 if model.has_generator:
                     generator_production = model.get_solution_variable('Generator Energy Production')
