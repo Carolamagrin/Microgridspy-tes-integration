@@ -64,7 +64,7 @@ resource_assessment:
   T_NMOT: 20
   G_NMOT: 800
 
-# --- RES parameters (non-editable) ---
+# RES parameters
 nasa_power_params:
   nasa_base_url: 'https://power.larc.nasa.gov/api/temporal/'
   loc_id: 'point'
@@ -79,7 +79,7 @@ nasa_power_params:
   nasa_output_format: 'JSON'
   user: 'anonymous'
 
-# RES parameters (non-editable)
+# RES parameters
 pvgis_params:
   pvgis_base_url: 'https://re.jrc.ec.europa.eu/api/tmy?'
   pvgis_output_format: 'json'
