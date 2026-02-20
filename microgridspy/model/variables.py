@@ -261,13 +261,6 @@ def add_tes_variables(model: Model, settings: ProjectParameters, sets: xr.Datase
         name="TES Discharge Flow"
     )
 
-    tes_variables["tes_overlap"] = model.add_variables(
-        dims=("years", "periods"),
-        coords={"years": sets.years, "periods": sets.periods},
-        lower=0,
-        name="TES Overlap Flow"
-    )
-
     # Produzione di ghiaccio [kg/h]
     tes_variables["tes_ice_production"] = model.add_variables(
         dims=("years", "periods"),
@@ -282,15 +275,6 @@ def add_tes_variables(model: Model, settings: ProjectParameters, sets: xr.Datase
         coords={"years": sets.years, "periods": sets.periods},
         lower=0,
         name="TES Electric Consumption"
-    )
-
-    # Variabile introdotta per impedire simultaneità (1=carica, 0=scarica)
-    tes_variables["tes_mode"] = model.add_variables(
-        dims=("years", "periods"),
-        coords={"years": sets.years, "periods": sets.periods},
-        lower=0,
-        upper=1,
-        name="TES Mode"
     )
 
     return tes_variables
