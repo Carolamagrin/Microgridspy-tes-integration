@@ -336,7 +336,6 @@ class TESParams(BaseModel):
     tes_compressor_specific_om_cost: float
     tes_compressor_lifetime: int
     tes_compressor_capacity_max: float = 5000.0
-    tes_simultaneity_penalty: float = 1000000
 
 class GeneratorParams(BaseModel):
     """
@@ -476,3 +475,4 @@ class ProjectParameters(BaseModel):
         """Save parameters to a YAML file."""
         with open(filepath, 'w') as file:
             yaml.dump(self.model_dump(), file)
+
