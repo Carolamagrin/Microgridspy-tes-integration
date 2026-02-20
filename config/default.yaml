@@ -64,7 +64,7 @@ resource_assessment:
   T_NMOT: 20
   G_NMOT: 800
 
-# RES parameters
+#RES parameters
 nasa_power_params:
   nasa_base_url: 'https://power.larc.nasa.gov/api/temporal/'
   loc_id: 'point'
@@ -79,7 +79,7 @@ nasa_power_params:
   nasa_output_format: 'JSON'
   user: 'anonymous'
 
-# RES parameters
+# RES parameters (non-editable)
 pvgis_params:
   pvgis_base_url: 'https://re.jrc.ec.europa.eu/api/tmy?'
   pvgis_output_format: 'json'
@@ -110,7 +110,7 @@ renewables_params:
   res_existing_area: [0] #m2
   res_existing_years: [0] #years
   res_inverter_efficiency: [0.95] #fraction
-  res_inverter_nominal_capacity: [1000] #W
+  res_inverter_nominal_capacity: [10000] #W
   res_inverter_lifetime: [20] #years
   res_inverter_existing_capacity: [0] #W
   res_inverter_existing_years: [0] #years
@@ -124,7 +124,7 @@ battery_params:
   battery_inverter_efficiency_dc_ac: 0.95 #fraction
   battery_inverter_efficiency_ac_dc: 0.95 #fraction
   battery_inverter_lifetime: 20 #years
-  battery_inverter_nominal_capacity: 1000 #W
+  battery_inverter_nominal_capacity: 10000 #W
   battery_inverter_cost: 0.25 #USD/W
   battery_discharge_battery_efficiency: 0.9 #fraction
   battery_charge_battery_efficiency: 0.9 #fraction
@@ -188,10 +188,10 @@ compressor_params:
   compressor_lifetime: 15 #years
 
 tes_params:
-  tes_capacity: 3000  #kg           
+  tes_capacity: 1000  #kg           
   tes_initial_soc: 0.1 #fraction
-  tes_max_charge_rate: 1000 #kg/h     
-  tes_max_discharge_rate: 1000  #kg/h
+  tes_max_charge_rate: 400 #kg/h     
+  tes_max_discharge_rate: 400  #kg/h
   tes_storage_efficiency: 0.98  
   tes_cop: 2              
   tes_q_per_kg: 90 #Wh_th/kg            
@@ -202,5 +202,3 @@ tes_params:
   tes_compressor_specific_om_cost: 0.015  #fraction
   tes_compressor_lifetime: 15 #years
   tes_compressor_capacity_max: 25000
-  tes_simultaneity_penalty: 10000000
-   
