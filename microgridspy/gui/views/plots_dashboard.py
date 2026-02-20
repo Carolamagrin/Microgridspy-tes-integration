@@ -194,45 +194,37 @@ def plot_tes_charge_discharge(model: Model):
         # Δt = 1 h 
         tes_soc = np.cumsum(tes_net)
 
-    # Chosen days
-    selected_day = st.slider("Select day", 0, days - 1, 0)
+    selected_day = st.slider("Select start day", 0, days - 1, 0)
+    num_days = st.slider("Number of days", 1, min(14, days - selected_day), 1)  # max 14 per leggibilità
+
     start = selected_day * 24
-    end = start + 24
+    end = (selected_day + num_days) * 24
+    x = np.arange(24 * num_days)
 
-    x = np.arange(24)
+    tes_net_sel = tes_net[start:end]
+    tes_soc_sel = tes_soc[start:end]
 
-    tes_net_day = tes_net[start:end]
-    tes_soc_day = tes_soc[start:end]
-
-    # SOC as a percentage for the second axis
-    soc_min = np.min(tes_soc_day)
-    soc_max = np.max(tes_soc_day)
-    if soc_max - soc_min < 1e-9:
-        tes_soc_pct_day = np.zeros_like(tes_soc_day)
+    # SOC in % rispetto alla CAPACITÀ reale se ce l’hai, altrimenti normalizzazione locale
+    # Se nel result hai già SOC in %, lascialo così.
+    # Se è in kg (massa), puoi convertirlo:
+    tes_cap = float(model.parameters.get("tes_capacity", 0))  # se esiste
+    if tes_cap > 0 and (np.nanmax(tes_soc_sel) > 100):  # euristica: se sembra in kg
+        tes_soc_pct = tes_soc_sel / tes_cap * 100.0
     else:
-        tes_soc_pct_day = (tes_soc_day - soc_min) / (soc_max - soc_min) * 100.0
+        # fallback: se è già % oppure non sai la capacità
+        tes_soc_pct = tes_soc_sel
 
-    # Plot
     fig, ax1 = plt.subplots(figsize=(12, 4))
+    ax2 = ax1.twinx()
 
-    # TES flux
-    ax1.fill_between(
-        x,
-        0,
-        tes_net_day,
-        alpha=0.35,
-        label="TES net flow [kg/h]"
-    )
+    ax1.fill_between(x, 0, tes_net_sel, alpha=0.35, label="TES net flow [kg/h]")
     ax1.axhline(0, color="black", linewidth=1)
-
     ax1.set_xlabel("Hour")
     ax1.set_ylabel("TES net flow [kg/h]")
-    ax1.set_title(f"TES Charge/Discharge – Day {selected_day + 1}")
+    ax1.set_title(f"TES Charge/Discharge — Days {selected_day + 1} to {selected_day + num_days}")
 
-    # SOC in %
-    ax2 = ax1.twinx()
-    ax2.plot(x, tes_soc_pct_day, color="black", linewidth=2, label="TES state of charge [%]")
-    ax2.set_ylabel("TES state of charge [%]")
+    ax2.plot(x, tes_soc_pct, color="black", linewidth=2, label="TES state of charge")
+    ax2.set_ylabel("TES state of charge [%]" if tes_cap > 0 else "TES state of charge")
 
     h1, l1 = ax1.get_legend_handles_labels()
     h2, l2 = ax2.get_legend_handles_labels()
@@ -240,7 +232,7 @@ def plot_tes_charge_discharge(model: Model):
 
     st.pyplot(fig)
 
-def plot_tes_and_direct_cooling(model: Model):
+def plot_tes_and_direct_cooling(model: Model, year: int = 0):
     import matplotlib.pyplot as plt
     import numpy as np
     import streamlit as st
@@ -248,115 +240,75 @@ def plot_tes_and_direct_cooling(model: Model):
     result = model.solution
     ts = model.time_series
 
-    # compressor + TES
-    try:
-        comp_el = result["compressor_electric_consumption"].isel(years=year).values
-    except:
-        comp_el = 0
-
-    try:
-        tes_el = result["tes_electric_consumption"].isel(years=year).values
-    except:
-        tes_el = 0
-
-    # TES charge/discharge
-    if "TES Charge Flow" in result:
-        tes_charge = result["TES Charge Flow"].isel(years=0).values.flatten()
-    else:
-        tes_charge = 0
-
+    # TES discharge
     if "TES Discharge Flow" in result:
-        tes_discharge = result["TES Discharge Flow"].isel(years=0).values.flatten()
+        tes_discharge = result["TES Discharge Flow"].isel(years=year).values.flatten()
     else:
         tes_discharge = 0
 
-    # Convertiamo in kW_th
     Q_per_kg = float(model.parameters.get("TES_Q_PER_KG", 0))
-    tes_discharge_kw = tes_discharge * Q_per_kg / 1000
+    tes_discharge_kw = tes_discharge * Q_per_kg / 1000  # kW_th
 
-    # Se TES non esiste, array di zeri
     if not getattr(model, "has_tes", False):
-        # infer length from thermal demand or direct cooling
         if "THERMAL_DEMAND" in ts:
-            n_hours = len(ts["THERMAL_DEMAND"].isel(years=0).values.flatten())
+            n_hours = len(ts["THERMAL_DEMAND"].isel(years=year).values.flatten())
         else:
             st.warning("Cannot infer time dimension for cooling plot.")
             return
-
         tes_discharge_kw = np.zeros(n_hours)
 
-    # Direct Cooling
-    if model.has_compressor:
-        if "compressor_cooling_output" in result:
-            dc_th = result["compressor_cooling_output"].isel(years=0).values.flatten()
-        else:
-            dc_th = np.zeros_like(tes_discharge_kw)
+    # Direct cooling
+    if getattr(model, "has_compressor", False) and "compressor_cooling_output" in result:
+        dc_th = result["compressor_cooling_output"].isel(years=year).values.flatten()
     else:
         dc_th = np.zeros_like(tes_discharge_kw)
-
     dc_th_kw = dc_th / 1000
-
-    # Force direct cooling to array if scalar
-    if not hasattr(dc_th_kw, "__len__"):
-        if "THERMAL_DEMAND" in ts:
-            dc_th_kw = np.zeros(len(ts["THERMAL_DEMAND"].isel(years=0).values.flatten()))
-        else:
-            dc_th_kw = np.zeros(24)
 
     # Thermal demand
     if "THERMAL_DEMAND" in ts:
-        th_kw = ts["THERMAL_DEMAND"].isel(years=0).values.flatten() / 1000
+        th_kw = ts["THERMAL_DEMAND"].isel(years=year).values.flatten() / 1000
     else:
         th_kw = None
 
-    if th_kw is not None:
-        n_hours = len(th_kw)
-    elif hasattr(dc_th_kw, "__len__"):
-        n_hours = len(dc_th_kw)
-    else:
-        st.warning("No time-series data available for cooling visualization.")
-        return
-
-    # Force TES discharge to array
-    if not hasattr(tes_discharge_kw, "__len__"):
-        tes_discharge_kw = np.zeros(n_hours)
-
-    # Force direct cooling to array
-    if not hasattr(dc_th_kw, "__len__"):
-        dc_th_kw = np.zeros(n_hours)
-
-    # days
-    hours = len(dc_th_kw)
-    days = hours // 24
+    n_hours = len(dc_th_kw)
+    days = n_hours // 24
     if days == 0:
         st.warning("Not enough data for TES visualization.")
         return
 
-    selected_day = st.slider("Select day for TES + Direct Cooling", 0, days - 1, 0)
+    selected_day = st.slider("Select start day for TES + Direct Cooling", 0, days - 1, 0)
+    num_days = st.slider("Number of days (TES + Direct)", 1, min(14, days - selected_day), 1)
+
     start = selected_day * 24
-    end = start + 24
-    x = np.arange(24)
+    end = (selected_day + num_days) * 24
+    x = np.arange(24 * num_days)
 
-    tes_day = tes_discharge_kw[start:end]
-    dc_day = dc_th_kw[start:end]
-    th_day = th_kw[start:end] if th_kw is not None else None
+    tes_sel = tes_discharge_kw[start:end]
+    dc_sel = dc_th_kw[start:end]
+    total_sel = tes_sel + dc_sel
+    th_sel = th_kw[start:end] if th_kw is not None else None
 
-    total_day = tes_day + dc_day
-
-    # Plot
     fig, ax = plt.subplots(figsize=(12, 5))
-    ax.fill_between(x, 0, tes_day, color="skyblue", alpha=0.35, label="TES Discharge [kW_th]")
-    ax.fill_between(x, tes_day, tes_day + dc_day, color="orange", alpha=0.35, label="Direct Cooling [kW_th]")
 
-    if th_day is not None:
-        ax.plot(x, th_day, 'k--', linewidth=2, label="Thermal Demand")
+    ax.fill_between(x, 0, tes_sel, alpha=0.35, label="TES Discharge [kW_th]")
+    ax.fill_between(x, tes_sel, tes_sel + dc_sel, alpha=0.35, label="Direct Cooling [kW_th]")
 
-    ax.plot(x, total_day, color="green", linewidth=2, label="Cooling Supplied (TES+Direct)")
+    if th_sel is not None:
+        ax.plot(x, th_sel, 'k--', linewidth=2, label="Thermal Demand")
+
+    ax.plot(
+        x,
+        total_sel,
+        linewidth=3,
+        color="green",
+        label="Cooling Supplied (TES+Direct)"
+    )
 
     ax.set_xlabel("Hour")
-    ax.set_ylabel("Cooling / TES [kW_th]")
-    ax.set_title(f"TES + Direct Cooling — Day {selected_day + 1}")
+    ax.set_ylabel("Cooling [kW_th]")
+    ax.set_title(f"TES + Direct Cooling — Days {selected_day + 1} to {selected_day + num_days}")
     ax.legend()
+    ax.grid(True)
 
     st.pyplot(fig)
 
