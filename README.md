@@ -240,16 +240,5 @@ where:
 
 - $f_{\text{OM, TES comp}}$ = OM cost fraction [-]
 
-### Simultaneity Penalty
-
-Simultaneous charging and discharging of the TES is economically penalized.
-
-For each time step, the overlap variable `tes_overlap` is multiplied by a penalty factor `TES_SIMULTANEITY_PENALTY`.
-
-$$
-C_{\text{sim}} = \sum_t \left( TES_{\text{overlap}} \cdot TES_{\text{simultaneity-penality}} \right)
-$$
-
-This cost is added to the total scenario cost to discourage simultaneous TES operation.
 
 
