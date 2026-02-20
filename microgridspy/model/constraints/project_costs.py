@@ -824,26 +824,6 @@ def add_scenario_variable_cost(
         lost_load_cost_var = 'scenario_lost_load_cost_act' if actualized else 'scenario_lost_load_cost_nonact'
         scenario_variable_cost += var[lost_load_cost_var]
     
-    # TES simultaneity penalty
-    if settings.advanced_settings.use_tes:
-
-        tes_penalty_cost: linopy.LinearExpression = 0
-        penalty = param["TES_SIMULTANEITY_PENALTY"]
-
-        for year in sets.years.values:
-
-            yearly_overlap = var["tes_overlap"].sel(years=year).sum("periods")
-
-            if actualized:
-                tes_penalty_cost += (
-                    yearly_overlap * penalty
-                    / ((1 + param["DISCOUNT_RATE"]) ** (year - sets.years.values[0] + 1))
-                )
-            else:
-                tes_penalty_cost += yearly_overlap * penalty
-
-        scenario_variable_cost += tes_penalty_cost
-
     try:
         # Add constraint
         var_name = 'total_scenario_variable_cost_act' if actualized else 'total_scenario_variable_cost_nonact'
