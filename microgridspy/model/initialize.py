@@ -763,9 +763,6 @@ def initialize_tes_parameters(data: ProjectParameters, sets: xr.Dataset) -> xr.D
         "TES_COMPRESSOR_CAPACITY_MAX": xr.DataArray(     
             data.tes_params.tes_compressor_capacity_max, dims=[]
         ),
-        "TES_SIMULTANEITY_PENALTY": xr.DataArray(
-            data.tes_params.tes_simultaneity_penalty, dims=[]
-        ),
     }
 
     return xr.Dataset(tes_params)
