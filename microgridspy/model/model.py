@@ -35,7 +35,6 @@ from microgridspy.model.variables import (
 )
 
 from microgridspy.model.constraints.project_costs import add_cost_calculation_constraints
-from microgridspy.model.constraints.energy_balance import add_energy_balance_constraints
 from microgridspy.model.constraints.conversion_constraints import add_minimum_conversion_size_constraints
 from microgridspy.model.constraints.res_constraints import add_res_constraints
 from microgridspy.model.constraints.battery_constraints import add_battery_constraints
@@ -161,6 +160,7 @@ class Model:
 
     def _add_constraints(self) -> None:
         """Add constraints to the model."""
+        from microgridspy.model.constraints.energy_balance import add_energy_balance_constraints
         add_res_constraints(self.model, self.settings, self.sets, self.parameters, self.variables)
         add_cost_calculation_constraints(self.model, self.settings, self.sets, self.parameters, self.variables, self.has_battery, self.has_generator, self.has_compressor, self.has_grid_connection, self.has_tes)
         add_energy_balance_constraints(self.model, self.settings, self.sets, self.parameters, self.variables, self.has_battery, self.has_generator, self.has_compressor, self.has_grid_connection, self.has_tes)
