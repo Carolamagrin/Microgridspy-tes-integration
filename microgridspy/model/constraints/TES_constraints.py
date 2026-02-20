@@ -130,24 +130,6 @@ def add_tes_flow_constraints(
             name=f"TES Minimum Discharge Flow Constraint - Year {year}",
         )
 
-        for period in sets.periods.values:
-
-            mode = var["tes_mode"].sel(years=year, periods=period)
-
-            # Se mode = 1 può solo caricare
-            model.add_constraints(
-                var["tes_charge"].sel(years=year, periods=period)
-                <= M_charge * mode,
-                name=f"TES Charge Allowed - Year {year} Period {period}"
-            )
-
-            # Se mode = 0 può solo scaricare
-            model.add_constraints(
-                var["tes_discharge"].sel(years=year, periods=period)
-                <= M_discharge * ((mode * 0 + 1) - mode),
-                name=f"TES Discharge Allowed - Year {year} Period {period}"
-            )
-
 def add_tes_production_constraints(
     model: Model,
     settings: ProjectParameters,
@@ -161,13 +143,13 @@ def add_tes_production_constraints(
 
     m_prod(t) * Q_per_kg = COP_TES * P_el,TES(t)
 
-    Assumo che tutto il ghiaccio prodotto venga usato per caricare il TES:
+    Assumiamo che tutto il ghiaccio prodotto venga usato per caricare il TES:
     m_charge(t) = m_prod(t)
     """
     tes_cop = param["TES_COP"]
     q_per_kg = param["TES_Q_PER_KG"]
 
-    #produzione ghiaccio e consumo elettrico
+    #produzione ghiaccio - consumo elettrico
     model.add_constraints(
         var["tes_ice_production"] * q_per_kg
         == var["tes_electric_consumption"] * tes_cop,
@@ -213,39 +195,3 @@ def add_tes_production_constraints(
         name="TES Energy Conservation Constraint",
     )
     
-def add_tes_overlap_constraints(
-    model: Model,
-    settings: ProjectParameters,
-    sets: xr.Dataset,
-    param: xr.Dataset,
-    var: Dict[str, linopy.Variable],
-) -> None:
-    """
-    Penalizzazione della simultaneità tra TES charge e TES discharge.
-    Definisce tes_overlap come min(charge, discharge) tramite
-    vincoli lineari:
-        tes_overlap <= tes_charge
-        tes_overlap <= tes_discharge
-    """
-
-    years = sets.years.values
-    periods = sets.periods.values
-
-    for year in years:
-        for period in periods:
-
-            overlap = var["tes_overlap"].sel(years=year, periods=period)
-            charge = var["tes_charge"].sel(years=year, periods=period)
-            discharge = var["tes_discharge"].sel(years=year, periods=period)
-
-            # tes_overlap <= tes_charge
-            model.add_constraints(
-                overlap <= charge,
-                name=f"TES Overlap Charge Limit - Year {year} Period {period}",
-            )
-
-            # tes_overlap <= tes_discharge
-            model.add_constraints(
-                overlap <= discharge,
-                name=f"TES Overlap Discharge Limit - Year {year} Period {period}",
-            )
